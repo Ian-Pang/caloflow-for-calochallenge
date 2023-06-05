@@ -21,7 +21,7 @@ import matplotlib
 from matplotlib.colors import LogNorm
 
 # for nearest neighbor plots:
-from data import CaloDataset
+from data_gamma import CaloDataset
 from sklearn.neighbors import NearestNeighbors
 
 irange = range
