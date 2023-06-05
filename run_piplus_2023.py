@@ -1129,6 +1129,7 @@ def train_rec_flow(rec_model, train_data, test_data, optim, args):
             E4 = data['layer_4_E']
             E5 = data['layer_5_E']
             E6 = data['layer_6_E']
+        
             E  = data['energy']
             #y = one_blob(E, 10).to(args.device)
             #y = torch.log10(E*100.).to(args.device)
@@ -1145,7 +1146,7 @@ def train_rec_flow(rec_model, train_data, test_data, optim, args):
                                                E), 1)).to(args.device)
             x = logit_trafo(x)
             loss = - rec_model.log_prob(x, y).mean(0)
-
+        
             optim.zero_grad()
             loss.backward()
             optim.step()

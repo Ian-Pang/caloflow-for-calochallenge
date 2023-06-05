@@ -28,7 +28,7 @@ class CaloDataset(Dataset):
 
     def __init__(self, path_to_file, particle_type,
                  transform_0=None, transform_1=None, transform_2=None, transform_3=None, transform_4=None, transform_5=None, transform_6=None,
-                 apply_logit=True, prefix=None, with_noise=False, which_flow,
+                 apply_logit=True, prefix=None, with_noise=False, which_flow=1,
                  return_label=False):
         """
         Args:
@@ -44,7 +44,7 @@ class CaloDataset(Dataset):
             self.path_to_file = os.path.join(path_to_file, particle_type+'.hdf5')
 
         self.full_file = h5py.File(self.path_to_file, 'r')
-
+        self.which_flow = which_flow
         self.apply_logit = apply_logit
         self.with_noise = with_noise
 
@@ -110,13 +110,13 @@ class CaloDataset(Dataset):
         #noise_tensor_7 = np.random.rand(*energy.shape)*1e-9 + np.dot(np.random.rand(*energy.shape),((np.log10(energy*1e5)-np.log10(256*np.ones_like(energy)))*(1e-8 - 1e-9)/(np.log10(4194304)-np.log10(256))))
 
         if self.with_noise:
-            layer_0 = add_noise(layer_0, which_flow)
-            layer_1 = add_noise(layer_1, which_flow)
-            layer_2 = add_noise(layer_2, which_flow)
-            layer_3 = add_noise(layer_3, which_flow)
-            layer_4 = add_noise(layer_4, which_flow)
-            layer_5 = add_noise(layer_5, which_flow)
-            layer_6 = add_noise(layer_6, which_flow)
+            layer_0 = add_noise(layer_0, self.which_flow)
+            layer_1 = add_noise(layer_1, self.which_flow)
+            layer_2 = add_noise(layer_2, self.which_flow)
+            layer_3 = add_noise(layer_3, self.which_flow)
+            layer_4 = add_noise(layer_4, self.which_flow)
+            layer_5 = add_noise(layer_5, self.which_flow)
+            layer_6 = add_noise(layer_6, self.which_flow)
 
         layer_0_E = layer_0.sum(keepdims=True)
         layer_1_E = layer_1.sum(keepdims=True)
@@ -201,7 +201,7 @@ class CaloDataset(Dataset):
         return sample
 
 def get_dataloader(particle_type, data_dir, device, full,
-                   batch_size=32, apply_logit=True, with_noise=False, which_flow, normed=False,
+                   batch_size=32, apply_logit=True, with_noise=False, which_flow=1, normed=False,
                    normed_layer=False, return_label=False):
 
     if normed and normed_layer:
@@ -231,14 +231,14 @@ def get_dataloader(particle_type, data_dir, device, full,
         dataset_kwargs = {'with_noise': with_noise}
 
     if full:
-        dataset = CaloDataset(data_dir, particle_type, apply_logit=apply_logit, which_flow,
+        dataset = CaloDataset(data_dir, particle_type, apply_logit=apply_logit, which_flow=which_flow,
                               return_label=return_label)
         return DataLoader(dataset, batch_size=batch_size,
                           shuffle=False, **kwargs)
     else:
-        train_dataset = CaloDataset(data_dir, particle_type, apply_logit=apply_logit, which_flow,
+        train_dataset = CaloDataset(data_dir, particle_type, apply_logit=apply_logit, which_flow=which_flow,
                                     prefix='train_', return_label=return_label, **dataset_kwargs)
-        test_dataset = CaloDataset(data_dir, particle_type, apply_logit=apply_logit, which_flow,
+        test_dataset = CaloDataset(data_dir, particle_type, apply_logit=apply_logit, which_flow=which_flow,
                                    prefix='test_', return_label=return_label, **dataset_kwargs)
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
