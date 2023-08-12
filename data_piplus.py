@@ -250,6 +250,7 @@ def get_dataloader(particle_type, data_dir, device, full,
 def add_noise(input_tensor, which_flow):
     if which_flow == 1:
         noise = np.random.rand(*input_tensor.shape)*1e-9
+        #noise = np.random.rand(*input_tensor.shape)*1e-10
     else:
         noise = np.random.rand(*input_tensor.shape)*1e-8
     #return input_tensor+noise

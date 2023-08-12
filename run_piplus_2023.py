@@ -26,6 +26,7 @@ import plot_calo_piplus
 from data_piplus import get_dataloader
 from data_piplus import save_samples_to_file
 #from base_dist import ConditionalDiagonalHalfNormal
+import optuna
 
 torch.set_default_dtype(torch.float64)
 
@@ -333,7 +334,7 @@ def generate_to_file(model, args, num_events=9000, energies=None, rec_model=None
     if args.mode == 'single':
         samples = split_and_concat(generate_single, 10000, model, args, 1, energies)
     elif args.mode == 'single_recursive':
-        samples = split_and_concat(generate_single_with_rec, 1, model, args, 1, energies,
+        samples = split_and_concat(generate_single_with_rec, 10000, model, args, 1, energies,
                                    rec_model)
 
     if args.mode not in ['single_recursive', 'three_recursive']:
@@ -359,7 +360,7 @@ def train_and_evaluate(model, train_loader, test_loader, optimizer, args, rec_mo
         #                                        mode='triangular2', gamma=0.9995, scale_fn=None, scale_mode='cycle',
         #                                        cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=- 1,
         #                                                verbose=False)
-        lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=2.5E-3, total_steps=16900, epochs=100, steps_per_epoch=None, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False)
+        lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1E-3, total_steps=17000, epochs=100, steps_per_epoch=None, pct_start=0.45, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False)
         #lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=2.5E-3, total_steps=None, epochs=100, steps_per_epoch=421, pct_start=0.4, anneal_strategy='cos', cycle_momentum=True, base_momentum=\
 #0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False) 
     else:
@@ -382,10 +383,10 @@ def train_and_evaluate(model, train_loader, test_loader, optimizer, args, rec_mo
         #else:
         #    for schedule in lr_schedule:
         #        schedule.step()
-        plot_calo_piplus.plot_loss(args.train_loss, args.test_loss,
-                            [os.path.join(args.output_dir, 'loss.png'),
-                             os.path.join(args.output_dir, 'test_loss.npy'),
-                             os.path.join(args.output_dir, 'train_loss.npy')])
+        #plot_calo_piplus.plot_loss(args.train_loss, args.test_loss,
+        #                    [os.path.join(args.output_dir, 'loss.png'),
+        #                     os.path.join(args.output_dir, 'test_loss.npy'),
+        #                     os.path.join(args.output_dir, 'train_loss.npy')])
 
 def train(model, dataloader, optimizer, epoch, args, lr_schedule):
     """ train the flow one epoch """
@@ -528,7 +529,7 @@ def trafo_to_unit_space(energy_array):
     num_dim = len(energy_array[0])-2
     #input = torch.empty(200) 
     #buffer = (1e-8)*torch.ones_like(input)
-    ret = [(torch.sum(energy_array[:, :-1], dim=1)/(7*energy_array[:, -1])).unsqueeze(1)]
+    ret = [(torch.sum(energy_array[:, :-1], dim=1)/(6.93*energy_array[:, -1])).unsqueeze(1)]
     for n in range(num_dim):
         ret.append((energy_array[:, n]/energy_array[:, n:-1].sum(dim=1)).unsqueeze(1))
         #ret.append((energy_array[:, n]/(energy_array[:, 1:n].sum(dim=1)+energy_array[:,4])).unsqueeze(1))
@@ -541,7 +542,7 @@ def trafo_to_energy_space(unit_array, etot_array):
     num_dim = len(unit_array[0])
     unit_array = torch.cat((unit_array, torch.ones(size=(len(unit_array), 1))), 1)
     ret = [torch.zeros_like(etot_array)]
-    ehat_array = unit_array[:, 0] * 7 * etot_array
+    ehat_array = unit_array[:, 0] * 6.93 * etot_array
     for n in range(num_dim):
         ret.append(unit_array[:, n+1]*(ehat_array-torch.cat(ret).view(
             n+1, -1).transpose(0, 1).sum(dim=1)))
@@ -1057,7 +1058,7 @@ def generate_single_with_rec(model, args, num_pts, energies, rec_model):
     """ Generate Samples from single flow with energy flow """
     model.eval()
     energy_dist_unit = sample_rec_flow(rec_model, num_pts, args, energies).to('cpu')
-    energy_dist_unit = torch.reshape(energy_dist_unit, (1,7))
+    #energy_dist_unit = torch.reshape(energy_dist_unit, (1,7))
     #energy_dist_unit = sample_rec_flow(rec_model, num_pts, args, energies).to('cpu')
     energy_dist = trafo_to_energy_space(energy_dist_unit, energies)
    #print(energy_dist.shape)
@@ -1115,7 +1116,7 @@ def train_rec_flow(rec_model, train_data, test_data, optim, args):
      #                                                  milestones=[5, 15, 40, 60, 100, 140, 220],
      #                                                  gamma=0.5,
      #                                                  verbose=True)
-    lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optim, max_lr=1.0E-3, total_steps=None, epochs=100, steps_per_epoch=421, pct_start=0.4, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False)
+    lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optim, max_lr=1.0E-3, total_steps=None, epochs=100, steps_per_epoch=423, pct_start=0.4, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=25.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False)
     #num_epochs = 400
     num_epochs = 100
     for epoch in range(num_epochs):
@@ -1228,7 +1229,7 @@ def train_and_evaluate_student(teacher, student, train_loader, test_loader, opti
     #best_eval_logprob = float('-inf')
     best_eval_KL = float('inf')
     
-    lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optimizer_student, max_lr=1.0E-3, total_steps=None, epochs=150, steps_per_epoch=481, pct_start=0.4, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=50.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False) #this is in paper on sep 26
+    lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optimizer_student, max_lr=1.0E-3, total_steps=None, epochs=150, steps_per_epoch=484, pct_start=0.4, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=50.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False) #this is in paper on sep 26
 
     #lr_schedule = torch.optim.lr_scheduler.OneCycleLR(optimizer_student, max_lr=1.0E-3, total_steps=None, epochs=160, steps_per_epoch=481, pct_start=0.45, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=50.0, final_div_factor=10000.0, three_phase=True, last_epoch=- 1, verbose=False)
     
@@ -1252,10 +1253,10 @@ def train_and_evaluate_student(teacher, student, train_loader, test_loader, opti
         if args.save_every_epoch:
             save_weights(student, args, is_student=True, name='student_'+str(i)+'.pt')
         #lr_schedule.step()
-        plot_calo_piplus.plot_loss(args.train_loss, args.test_loss,
-                           [os.path.join(args.output_dir, 'student_loss.png'),
-                            os.path.join(args.output_dir, 'student_test_loss.npy'),
-                            os.path.join(args.output_dir, 'student_train_loss.npy')])
+        #plot_calo_piplus.plot_loss(args.train_loss, args.test_loss,
+        #                   [os.path.join(args.output_dir, 'student_loss.png'),
+        #                    os.path.join(args.output_dir, 'student_test_loss.npy'),
+        #                    os.path.join(args.output_dir, 'student_train_loss.npy')])
 
 def train_student(teacher, student, dataloader, optimizer, epoch, args, lr_schedule):
     """ train student with recursive single teacher """
@@ -1729,7 +1730,15 @@ if __name__ == '__main__':
         print("loading recursive energy flow", file=open(args.results_file, 'a'))
         load_rec_flow(rec_model, args)
     else:
+        starting_time = time.time()
         train_rec_flow(rec_model, train_dataloader, test_dataloader, rec_optimizer, args)
+        ending_time = time.time()
+        total_time = ending_time-starting_time
+        time_string = "Needed {:d} min and {:.1f} s to train flow-1."
+        print(time_string.format(int(total_time//60), total_time%60))
+        print(time_string.format(int(total_time//60), total_time%60),
+          file=open(args.results_file, 'a'))
+        #train_rec_flow(rec_model, train_dataloader, test_dataloader, rec_optimizer, args)
         print("loading recursive energy flow")
         print("loading recursive energy flow", file=open(args.results_file, 'a'))
         load_rec_flow(rec_model, args)
@@ -1908,9 +1917,14 @@ if __name__ == '__main__':
 
     if not args.student_mode:
         if args.train:
+            starting_time = time.time()
             train_and_evaluate(model, train_dataloader, test_dataloader, optimizer, args,
                                rec_model=rec_model if ('recursive' in args.mode) else None)
-
+            ending_time = time.time()
+            total_time = ending_time-starting_time
+            time_string = "Needed {:d} min and {:.1f} s to train flow-II teacher."
+            print(time_string.format(int(total_time//60), total_time%60))
+            print(time_string.format(int(total_time//60), total_time%60),file=open(args.results_file, 'a'))
 
         if args.evaluate:
             load_weights(model, args)
@@ -1919,25 +1933,24 @@ if __name__ == '__main__':
         if args.generate_to_file:
             load_weights(model, args)
             # for nn plots
-            num_events = 120230
+            num_events = 120800
             #num_events =40000
             #num_events = 11000
             
-            list1 = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144]
-            list2 = [1048576, 2097152]
+            list1 = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072]
+            list2 = [1048576, 2097152,4194304]
             energy_list = []
             for energy in list1:
-                #energy_list.append(np.ones(int(num_events/12))*(energy/1e5))
                 energy_list = np.concatenate((energy_list,(np.ones(int(10000))*energy/1e5)))
             count = 4
+            energy_list = np.concatenate((energy_list,(np.ones(int(9800))*262144/1e5)))
             energy_list = np.concatenate((energy_list,(np.ones(int(5000))*524288/1e5)))
             for energy in list2:
                 count -= 1
                 #energy_list.append(np.ones(int((num_events/12)*count/10))*energy/1e5)
                 energy_list= np.concatenate((energy_list,(np.ones(int(1000*count))*energy/1e5)))
-            energy_list = np.concatenate((energy_list,(np.ones(int(230))*4194304/1e5)))
             #print(energy_list)
-            energy_list = np.reshape(energy_list, (1,120230))
+            energy_list = np.reshape(energy_list, (1,120800))
             
             #list1 = [256, 512, 1024, 2048]
             #energy_list=[]
@@ -2048,6 +2061,7 @@ if __name__ == '__main__':
             total_time = ending_time - starting_time
             time_string = "Needed {:d} min and {:.1f} s to train flow-II for piplus student"
             print(time_string.format(int(total_time//60), total_time%60))
+            print(time_string.format(int(total_time//60), total_time%60),file=open(args.results_file, 'a'))
 
         if args.evaluate_KL:
             load_weights(student, args, is_student=True)
@@ -2081,23 +2095,24 @@ if __name__ == '__main__':
             load_weights(student, args, is_student=True)
             # for nn plots
             #my_energies = torch.tensor(2000*[0.05, 0.1, 0.2, 0.5, 0.95])
-            num_events = 120230
+            num_events = 120800
+            #num_events =40000
             #num_events = 11000
-            list1 = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144]
-            list2 = [1048576, 2097152]
+            
+            list1 = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072]
+            list2 = [1048576, 2097152,4194304]
             energy_list = []
             for energy in list1:
-                #energy_list.append(np.ones(int(num_events/12))*(energy/1e5))
                 energy_list = np.concatenate((energy_list,(np.ones(int(10000))*energy/1e5)))
             count = 4
+            energy_list = np.concatenate((energy_list,(np.ones(int(9800))*262144/1e5)))
             energy_list = np.concatenate((energy_list,(np.ones(int(5000))*524288/1e5)))
             for energy in list2:
                 count -= 1
                 #energy_list.append(np.ones(int((num_events/12)*count/10))*energy/1e5)
                 energy_list= np.concatenate((energy_list,(np.ones(int(1000*count))*energy/1e5)))
-            energy_list = np.concatenate((energy_list,(np.ones(int(230))*4194304/1e5)))
             #print(energy_list)
-            energy_list = np.reshape(energy_list, (1,120230))
+            energy_list = np.reshape(energy_list, (1,120800))
             #energy_list = np.reshape(energy_list, (1,11000))
             #print(energy_list.shape)
             my_energies = torch.from_numpy(energy_list)
