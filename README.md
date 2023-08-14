@@ -6,7 +6,7 @@ This repository contains the source code for reproducing the results of
 _"CaloFlow for CaloChallenge Dataset 1"_ by Claudius Krause, Ian Pang, and David Shih, [arxiv: 2210.14245](https://arxiv.org/abs/2210.14245)
 
 If you use the code, please cite:
-
+```
 @article{Krause:2022jna,
     author = "Krause, Claudius and Pang, Ian and Shih, David",
     title = "{CaloFlow for CaloChallenge Dataset 1}",
@@ -16,7 +16,7 @@ If you use the code, please cite:
     month = "10",
     year = "2022"
 }
-
+```
 
 ### Running CaloFlow
 
@@ -55,6 +55,6 @@ To train the CaloFlow pion student model, run
 
 `python run_piplus_2023.py --train --student_mode --restore_file /path/to/teacher_weights  --hidden_size 533 --student_hidden_size 500 --batch_size 175 --output_dir /path/to/output_directory --with_noise --n_epochs 150 --data_dir /path/to/data_directory`
 
-To generate 100k events from the CaloFlow student model, run
+To generate 100k events from the CaloFlow pion student model, run
 
 `python run_piplus_2023.py --generate_to_file --student_mode --student_restore_file /path/to/student_weights --student_hidden_size 500 --output_dir /path/to/output_directory` 
